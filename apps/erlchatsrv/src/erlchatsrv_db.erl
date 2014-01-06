@@ -7,7 +7,7 @@
 init() ->
 	ets:new(users, [set, public, named_table]),
 	ets:new(history, [set, public, named_table]).
-	
+
 test() ->
 	ok.
 
@@ -25,7 +25,7 @@ to_history(Nick, Message) ->
 		[] ->
 			ets:insert(history, {Nick, [Message]});
 		[{Key,Value}] ->
-			ets:insert(history, {Key, Value++[Message]});
+			ets:insert(history, {Key, Value++" "++[Message]});
 		_ -> ok
 	end.
 

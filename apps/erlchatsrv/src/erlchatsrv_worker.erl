@@ -30,13 +30,12 @@ handle_cast(accept, State) ->
 	erlchatsrv_sup:start_socket(),
 	{noreply, State};
 
-handle_cast({privMsg, _From, ToNick, MsgBody}, State) when ToNick == State#state.nick->
-	io:fwrite("priv_msg received: ~p~n", [self()]),
-	gen_tcp:send(State#state.socket, MsgBody),
+handle_cast({privMsg, ToNick, MsgBody}, State) when ToNick == State#state.nick->
+	Msg = [{<<"message">>, <<"priv">>},{<<"from">>, State#state.nick},{<<"content">>, MsgBody}],
+	gen_tcp:send(State#state.socket, jsx:encode(Msg)),
 	{noreply, State};
 
 handle_cast({chatMsg, MsgBody}, State) ->
-	io:fwrite("chat_msg received: ~p~n", [self()]),
 	gen_tcp:send(State#state.socket, MsgBody),
 	{noreply, State};
 
@@ -46,6 +45,11 @@ handle_cast(_Msg, State) ->
 parse_data(Data, State) ->
 	D = jsx:decode(Data),
 	case D of 
+		[{<<"cmd">>, <<"users">>}] ->
+			UsersStatus = erlchatsrv_db:get_users(),
+			MsgBody = [{<<"cmd">>, <<"users">>}, {<<"list">>, UsersStatus}],
+			gen_tcp:send(State#state.socket, jsx:encode(MsgBody)),
+			{noreply, State};
 		[{<<"user">>,<<"join">>},{<<"nick">>,Nick}] when State#state.nick == []->
 			io:fwrite("User joined: ~p~n", [self()]),
 			erlchatsrv_db:join(Nick),
@@ -53,23 +57,26 @@ parse_data(Data, State) ->
 		[{<<"user">>,<<"leave">>}] when State#state.nick =/= [] ->
 			erlchatsrv_sup:stop_socket(self()), 
 			{noreply, State};
-		[{<<"message">>, <<"priv">>},{<<"to">>, ToNick},{<<"content">>, PrivMsg}] ->
-			[gen_server:cast(Clients, {privMsg, State#state.nick, ToNick, PrivMsg}) || Clients <- pg2:get_members(clients)],
+		[{<<"message">>, <<"priv">>},{<<"to">>, ToNick},{<<"content">>, MsgBody}] ->
+			[gen_server:cast(Clients, {privMsg, ToNick, MsgBody}) || Clients <- pg2:get_members(clients)],
 			{noreply, State};
-		[{<<"message">>, <<"chat">>},{<<"content">>, MsgBody}] when State#state.nick =/= [] ->
-			erlchatsrv_db:save_message(State#state.nick, MsgBody),
-			[gen_server:cast(Clients, {chatMsg,  MsgBody}) || Clients <- pg2:get_members(clients)],
+		[{<<"message">>, <<"chat">>},{<<"from">>, Nick},{<<"content">>, MsgBody}] when State#state.nick =/= [] ->
+			erlchatsrv_db:to_history(State#state.nick, MsgBody),
+			[gen_server:cast(Clients, {chatMsg, Data}) || Clients <- pg2:get_members(clients)],
 			{noreply, State};
 		[{<<"cmd">>,<<"history">>},{<<"user">>, NickName}] when State#state.nick =/= [] ->
-			erlchatsrv_db:get_history(NickName),
+			[{H,History}] = erlchatsrv_db:get_history(NickName),
+			% lager:log(info,self(), "username ~p", [NickName]),
+			Msg = [{<<"cmd">>, <<"history">>}, {<<"user">>, NickName}, {<<"history">>, list_to_binary(History)}],
+			[gen_server:cast(Clients, {chatMsg, jsx:encode(Msg)}) || Clients <- pg2:get_members(clients)],
 			{noreply, State};
 		_ -> 
-			lager:log(info, self(), "unknown message ~p", [D]),
+			% lager:log(info, self(), "unknown message ~p", [D]),
 			{noreply, State}
 	end.
 	
 handle_info({tcp_closed, _Port}, State) ->
-io:fwrite("User leave: ~p~n", [self()]),
+	io:fwrite("User leave: ~p~n", [self()]),
 	erlchatsrv_db:leave(State#state.nick),
 	erlchatsrv_sup:stop_socket(self()),
     {noreply, State#state{nick=null}};

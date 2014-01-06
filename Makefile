@@ -1,9 +1,19 @@
 PROJECT_NAME=erlchat
 
-PLT_NAME=.projectname_dialyzer.plt
+all: reqs compile run
+
+reqs:
+	rebar get-deps
+
+compile: clean
+	rebar compile
+
+clean:
+	rebar clean
 
 run:
 	rebar compile
 	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval '[application:start(A) || A <- [kernel, syntax_tools, compiler, goldrush, lager, sync, erlchatsrv, erlchat_client] ]'
 
- 
+
+	
