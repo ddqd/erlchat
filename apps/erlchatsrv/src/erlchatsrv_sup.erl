@@ -6,7 +6,7 @@
 %% API
 -export([start_link/0]).
 
--export([start_socket/0]).
+-export([start_socket/0, stop_socket/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -20,10 +20,20 @@
 %% API functions
 %% ===================================================================
 
+stop_socket(Pid) ->
+	MinChild = length(supervisor:which_children(?MODULE)),
+	 if 
+	 	MinChild > 2 ->
+	 		supervisor:terminate_child(?MODULE, Pid);
+	 	true ->
+	 		ok
+	 end.
+
 start_socket() ->
 	supervisor:start_child(?MODULE, []).
 
 start_link() ->
+	erlchatsrv_db:init(),
 	pg2:create(clients),
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []),
 	start_socket().
@@ -34,4 +44,4 @@ start_link() ->
 
 init([]) ->	
 	{ok, Socket} = gen_tcp:listen(7000, ?TCP_OPTIONS),
-	{ok, { {simple_one_for_one, 60, 3600}, [?CHILD(server_logic, worker, [Socket])]} }.
+	{ok, { {simple_one_for_one, 60, 3600}, [?CHILD(erlchatsrv_worker, worker, [Socket])]} }.
