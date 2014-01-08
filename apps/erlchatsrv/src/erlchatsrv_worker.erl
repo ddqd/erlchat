@@ -74,16 +74,21 @@ parse_data(Data, State) ->
 			[gen_server:cast(Clients, {chatMsg, Data}) || Clients <- pg2:get_members(clients)],
 			{noreply, State};
 		[{<<"cmd">>,<<"history">>},{<<"user">>, NickName}] when State#state.nick =/= [] ->
-			[{H,History}] = erlchatsrv_db:get_history(NickName),
-			% lager:log(info,self(), "username ~p", [NickName]),
+			get_history(NickName, State);
+		_ -> 
+			{noreply, State}
+	end.
+
+get_history(NickName, State) ->
+	case erlchatsrv_db:get_history(NickName) of
+		[{H,History}] ->
 			Msg = [{<<"cmd">>, <<"history">>}, {<<"user">>, NickName}, {<<"history">>, list_to_binary(History)}],
 			[gen_server:cast(Clients, {chatMsg, jsx:encode(Msg)}) || Clients <- pg2:get_members(clients)],
 			{noreply, State};
-		_ -> 
-			% lager:log(info, self(), "unknown message ~p", [D]),
+		_ ->
 			{noreply, State}
 	end.
-	
+
 handle_info({tcp_closed, _Port}, State) ->
 	erlchatsrv_db:leave(State#state.nick),
 	erlchatsrv_sup:stop_socket(self()),

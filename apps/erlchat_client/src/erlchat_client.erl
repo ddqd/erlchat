@@ -55,7 +55,7 @@ parse_data(Data, State) ->
 			lager:log(info, self(), "--> [Users status]: ~p", [UsersStatus]),
 			{noreply, State};
 		[{<<"user">>,<<"join">>},{<<"nick">>,Nick}] ->
-			lager:log(info, self(), "--> [User join]: ~p", [Nick]),
+			lager:log(info, self(), "--> [User join]: ~p", [binary_to_list(Nick)]),
 			{noreply, State};
 		[{<<"user">>,<<"leave">>},{<<"nick">>,Nick}] ->
 			lager:log(info, self(), "--> [User leave]: ~p", [Nick]),

@@ -19,7 +19,7 @@ test_spec:
 
 run:
 	rebar compile
-	erl -sname $(PROJECT_NAME) -pa ebin apps/*/ebin deps/*/ebin -eval 'application:start(erlchat)'
+	erl -sname $(PROJECT_NAME) -pa ebin apps/*/ebin deps/*/ebin -eval '[application:start(A) || A <- [erlchatsrv, erlchat_client]]'
 
 client:
 	rebar compile

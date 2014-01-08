@@ -14,7 +14,6 @@ all() ->
     send_private,
     get_users,
     get_history
-
   ].
 
 init_per_suite(Config) ->
