@@ -5,9 +5,16 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+-define(USER, "TestUser").
+
 all() ->
   [
-    ex_test
+    connection,
+    send_message,
+    send_private,
+    get_users,
+    get_history
+
   ].
 
 init_per_suite(Config) ->
@@ -24,5 +31,22 @@ end_per_testcase(_, Config) ->
 end_per_suite(Config) ->
   Config.
 
-ex_test(_Config) ->
-  ?assertEqual(ok, ok).
+connection(_Config) ->
+  Res = erlchat_client:connect(?USER, "localhost", 7000),
+  ?assertEqual(ok, Res).
+
+send_message(_Config) ->
+  Res = erlchat_client:send("TestMessage"),
+  ?assertEqual(ok, Res).
+
+send_private(_Config) ->
+  Res = erlchat_client:send_priv(?USER, "TestMessage"),
+  ?assertEqual(ok, Res).
+
+get_users(_Config) ->
+  Res = erlchat_client:get_users(),
+  ?assertEqual(ok, Res).
+
+get_history(_Config) ->
+  Res = erlchat_client:get_history(),
+  ?assertEqual(ok, Res).

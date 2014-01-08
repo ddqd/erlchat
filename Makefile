@@ -23,11 +23,11 @@ run:
 
 client:
 	rebar compile
-	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval 'application:start(erlchat_client)'
+	erl -sname server -pa apps/*/ebin deps/*/ebin -eval 'application:start(erlchat_client)'
 
 server:
 	rebar compile
-	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval 'application:start(erlchatsrv)'
+	erl -sname client -pa apps/*/ebin deps/*/ebin -eval 'application:start(erlchatsrv)'
 
 test: compile
 	rebar ct skip_deps=true

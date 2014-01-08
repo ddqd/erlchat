@@ -52,7 +52,13 @@ parse_data(Data, State) ->
 			lager:log(info, self(), "--> [HISTORY of ~p]: ~p", [binary_to_list(Nick), binary_to_list(Message)]),
 			{noreply, State};
 		[{<<"cmd">>, <<"users">>}, {<<"list">>, UsersStatus}] ->
-			lager:log(info, self(), "--> [Users status]: ~p", UsersStatus),
+			lager:log(info, self(), "--> [Users status]: ~p", [UsersStatus]),
+			{noreply, State};
+		[{<<"user">>,<<"join">>},{<<"nick">>,Nick}] ->
+			lager:log(info, self(), "--> [User join]: ~p", [Nick]),
+			{noreply, State};
+		[{<<"user">>,<<"leave">>},{<<"nick">>,Nick}] ->
+			lager:log(info, self(), "--> [User leave]: ~p", [Nick]),
 			{noreply, State};
 		_ ->
 			{noreply, State}
@@ -88,14 +94,17 @@ handle_call(get_history, _From, State) when State#state.socket =/= [] ->
 	{reply, Reply, State};
 
 handle_call(disconnect, _From, State) when State#state.socket =/= [] ->
+	Msg = [{<<"user">>,<<"leave">>},{<<"nick">>, State#state.nick}],
+	gen_tcp:send(State#state.socket, jsx:encode(Msg)),
+	gen_tcp:send(State#state.socket, jsx:encode(Msg)),
 	Reply = gen_tcp:close(State#state.socket),
-	{reply, Reply, State};
+	{reply, Reply, #state{}};
 
 handle_call(_Request, _From, State) ->
 	Reply = ok,
 	{reply, Reply, State}.
 
-handle_cast({connect, Nick, Host, Port}, State) when State#state.socket =/= [] ->
+handle_cast({connect, _, _, _}, State) when State#state.socket =/= [] ->
 	lager:log(info, self(), "Already connected", []),
 	{noreply, State};
 
@@ -109,23 +118,22 @@ handle_cast({connect, Nick, Host, Port}, State) when State#state.socket == [] ->
   		NewState = State#state{nick=Nick, host=Host, port=Port, socket=Socket},
   		{noreply, NewState};
   	{error, Reason} ->
-  		lager:log(info, self(), "Failed connect to server \n", []),
+  		lager:log(info, self(), "Failed connect to server: ~p \n", [Reason]),
   		{noreply, State}
   end;
 
 handle_cast(_Msg, State) ->
 	{noreply, State}.		
  
-handle_info({tcp_closed, _Port}, State) ->
+handle_info({tcp_closed, _Port}, _State) ->
 	lager:log(info, self(), "Server disconnected \n", []),
     {noreply, #state{}};
 
-handle_info({tcp_error, _Socket, Reason}, State) ->
+handle_info({tcp_error, _Socket, Reason}, _State) ->
     io:fwrite("Error: ~p~n", [Reason]),
     {stop, normal, #state{}};
 
-handle_info({tcp, Socket, Data}, State) ->
-	% lager:log(info, self(), "incoming~p \n", [Data]),
+handle_info({tcp, _Socket, Data}, State) ->
 	case jsx:is_json(Data) of
 		true ->
 			parse_data(Data, State);
