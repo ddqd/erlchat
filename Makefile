@@ -11,14 +11,25 @@ compile: clean
 clean:
 	rebar clean
 
+check:
+	dialyzer --build_plt --apps kernel stdlib syntax_tools compiler -r deps
+
+test_spec:
+	dialyzer --src apps/*/src/
+
 run:
 	rebar compile
-	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval '[application:start(A) || A <- [kernel, syntax_tools, compiler, goldrush, lager, sync, erlchatsrv, erlchat_client]]'
+	erl -sname $(PROJECT_NAME) -pa ebin apps/*/ebin deps/*/ebin -eval 'application:start(erlchat)'
 
 client:
 	rebar compile
-	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval '[application:start(A) || A <- [kernel, syntax_tools, compiler, goldrush, lager, sync, erlchat_client]]'
+	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval 'application:start(erlchat_client)'
 
 server:
 	rebar compile
-	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval '[application:start(A) || A <- [kernel, syntax_tools, compiler, goldrush, lager, sync, erlchatsrv]]'
+	erl -sname $(PROJECT_NAME) -pa apps/*/ebin deps/*/ebin -eval 'application:start(erlchatsrv)'
+
+test: compile
+	rebar ct skip_deps=true
+
+test_all: reqs compile test

@@ -1,4 +1,4 @@
--module(erlchatsrv_app).
+-module(erlchat_app).
 
 -behaviour(application).
 
@@ -10,13 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-	[application:start(A) || A <- [kernel, stdlib, syntax_tools, compiler, goldrush, lager, sync]],
-	case erlchatsrv_sup:start_link() of
-		{ok, Pid} ->
-			{ok, Pid};
-		Error ->
-			Error
-	end.
+    erlchat_sup:start_link().
 
 stop(_State) ->
     ok.

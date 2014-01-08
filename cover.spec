@@ -1,0 +1,1 @@
+{incl_app, ["erlchat", "erlchat_client", "erlchatsrv"]}.

@@ -1,5 +1,7 @@
+*.beam
 deps/
 _build/
 ebin/
 .depsolver_plt
 log
+logs

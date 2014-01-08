@@ -8,12 +8,9 @@
  
 -export([handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([connect/0, connect/3, disconnect/0, send/1, send_priv/2, get_history/0, get_history/1, get_users/0]).
+-export([connect/3, disconnect/0, send/1, send_priv/2, get_history/0, get_history/1, get_users/0]).
 
 -record(state, {nick=[], host, port, socket=[]}).
-
-connect() ->
-	connect("Username", "localhost", 7000).
 
 connect(Nick, Host, Port) ->
 	gen_server:cast(?MODULE, {connect,Nick, Host, Port}).
@@ -36,6 +33,7 @@ get_history() ->
 get_users() ->
 	gen_server:call(?MODULE, get_users).
 
+-spec init([]) -> {ok, #state{}}.
 init([]) ->
 	State = #state{},
 	{ok, State}.
@@ -87,7 +85,7 @@ handle_call(get_users, _From, State) when State#state.socket =/= [] ->
 handle_call(get_history, _From, State) when State#state.socket =/= [] ->
 	Msg = [{<<"cmd">>,<<"history">>},{<<"user">>,list_to_binary(State#state.nick)}],
 	Reply = gen_tcp:send(State#state.socket, jsx:encode(Msg)),
-	{reply, Reply, State};	
+	{reply, Reply, State};
 
 handle_call(disconnect, _From, State) when State#state.socket =/= [] ->
 	Reply = gen_tcp:close(State#state.socket),
