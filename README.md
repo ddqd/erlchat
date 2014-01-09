@@ -14,3 +14,7 @@ erlang chat server&client
 5. Get user list: `erlchat_client:get_users().`
 6. Get history `erlchat_client:get_users().`
 7. Get history of specified user: `erlchat_client:get_users("Username").`
+
+
+
+
